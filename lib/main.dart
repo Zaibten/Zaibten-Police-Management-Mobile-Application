@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'screens/duty.dart';
 import 'screens/global.dart';
 import 'screens/home.dart';
 import 'screens/login.dart';
@@ -31,7 +32,8 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: isLoggedIn ? HomePage() : const Login(),
+      home: DutyPage(),
+      // home: isLoggedIn ? HomePage() : const Login(),
     );
   }
 }

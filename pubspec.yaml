@@ -29,6 +29,7 @@ dependencies:
   animated_login: ^1.7.2
   video_player: ^2.7.0
   location: ^7.0.0
+  connectivity_plus: ^4.0.0
 
 dependency_overrides:
   geolocator_android: 4.6.1

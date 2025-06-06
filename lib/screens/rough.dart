@@ -1,391 +1,271 @@
-// // // void showPMSDialog({
-// // //   required String title,
-// // //   required String message,
-// // //   required IconData icon,
-// // //   required Color iconColor,
-// // // }) {
-// // //   showDialog(
-// // //     context: context,
-// // //     builder: (_) => AlertDialog(
-// // //       title: Row(
-// // //         children: [
-// // //           Icon(icon, color: iconColor),
-// // //           const SizedBox(width: 8),
-// // //           Text("PMS System - $title"),
-// // //         ],
-// // //       ),
-// // //       content: Text(message, style: const TextStyle(fontSize: 16)),
-// // //       actions: [
-// // //         TextButton(
-// // //           onPressed: () => Navigator.pop(context),
-// // //           child: const Text("OK"),
-// // //         ),
-// // //       ],
-// // //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-// // //     ),
-// // //   );
-// // // }
+// // // // void showPMSDialog({
+// // // //   required String title,
+// // // //   required String message,
+// // // //   required IconData icon,
+// // // //   required Color iconColor,
+// // // // }) {
+// // // //   showDialog(
+// // // //     context: context,
+// // // //     builder: (_) => AlertDialog(
+// // // //       title: Row(
+// // // //         children: [
+// // // //           Icon(icon, color: iconColor),
+// // // //           const SizedBox(width: 8),
+// // // //           Text("PMS System - $title"),
+// // // //         ],
+// // // //       ),
+// // // //       content: Text(message, style: const TextStyle(fontSize: 16)),
+// // // //       actions: [
+// // // //         TextButton(
+// // // //           onPressed: () => Navigator.pop(context),
+// // // //           child: const Text("OK"),
+// // // //         ),
+// // // //       ],
+// // // //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+// // // //     ),
+// // // //   );
+// // // // }
+
 
 
 // import 'package:flutter/material.dart';
 // import 'package:shared_preferences/shared_preferences.dart';
 // import 'dart:convert';
 // import 'package:http/http.dart' as http;
-// // import 'package:geolocator/geolocator.dart';
-// import 'package:permission_handler/permission_handler.dart';
 
-// import 'login.dart';
-
-// class HomePage extends StatefulWidget {
-//   const HomePage({super.key});
+// class DutyPage extends StatefulWidget {
+//   const DutyPage({super.key});
 
 //   @override
-//   State<HomePage> createState() => _HomePageState();
+//   State<DutyPage> createState() => _DutyPageState();
 // }
 
-// class _HomePageState extends State<HomePage> {
-//   String batchNo = '';
-//   String? xCoord;
-//   String? yCoord;
-//   String? locationName;
-
-//   // Current device location (latitude, longitude)
-//   double? currentLatitude;
-//   double? currentLongitude;
-
-//   final List<Map<String, String>> infoCards = [
-//     {'title': 'Total Present', 'value': '3'},
-//     {'title': 'Total Absents', 'value': '4'},
-//     {'title': 'Name', 'value': 'John Doe'},
-//     {'title': 'Batch No', 'value': 'A12345'},
-//   ];
+// class _DutyPageState extends State<DutyPage> {
+//   List<dynamic> duties = [];
+//   bool isLoading = true;
+//   String errorMessage = '';
 
 //   @override
 //   void initState() {
 //     super.initState();
-//     _loadBatchNo();
-//     // _requestLocationPermissionAndFetch();
+//     fetchDuties();
 //   }
 
-//   // Future<void> _requestLocationPermissionAndFetch() async {
-//   //   // Check location permission
-//   //   var status = await Permission.location.status;
-//   //   if (!status.isGranted) {
-//   //     status = await Permission.location.request();
-//   //     if (!status.isGranted) {
-//   //       // Permission denied, handle gracefully
-//   //       print('Location permission denied');
-//   //       return;
-//   //     }
-//   //   }
-
-//   //   // Get device location
-//   //   try {
-//   //     Position position = await Geolocator.getCurrentPosition(
-//   //         desiredAccuracy: LocationAccuracy.high);
-
-//   //     setState(() {
-//   //       currentLatitude = position.latitude;
-//   //       currentLongitude = position.longitude;
-//   //     });
-//   //   } catch (e) {
-//   //     print('Error getting location: $e');
-//   //   }
-//   // }
-
-//   Future<void> _loadBatchNo() async {
-//     SharedPreferences prefs = await SharedPreferences.getInstance();
-//     String? storedBatchNo = prefs.getString('batchNo');
-
-//     if (storedBatchNo != null) {
-//       setState(() {
-//         batchNo = storedBatchNo;
-//       });
-//       await _fetchDashboardData(batchNo);
-//     }
-//   }
-
-//   Future<void> _fetchDashboardData(String batchNo) async {
+//   Future<void> fetchDuties() async {
 //     try {
-//       final response = await http
-//           .get(Uri.parse('http://192.168.0.111:5000/api/dashboard/$batchNo'));
+//       SharedPreferences prefs = await SharedPreferences.getInstance();
+//       String? batchNo = prefs.getString('batchNo');
+
+//       if (batchNo == null || batchNo.isEmpty) {
+//         setState(() {
+//           isLoading = false;
+//           errorMessage = 'No batch number found in local storage.';
+//         });
+//         return;
+//       }
+
+//       final url = Uri.parse('http://192.168.0.111:5000/api/myduties/$batchNo');
+//       final response = await http.get(url);
 
 //       if (response.statusCode == 200) {
 //         final data = json.decode(response.body);
-
 //         setState(() {
-//           infoCards[0]['value'] = data['totalPresent'].toString();
-//           infoCards[1]['value'] = data['totalAbsent'].toString();
-//           infoCards[2]['value'] = data['name'].toString();
-//           infoCards[3]['value'] = data['batchNo'].toString();
-
-//           xCoord = data['xCoord']?.toString();
-//           yCoord = data['yCoord']?.toString();
-//           locationName = data['location']?.toString();
+//           duties = data['duties'];
+//           isLoading = false;
 //         });
 //       } else {
-//         print('Failed to load dashboard data: ${response.statusCode}');
+//         setState(() {
+//           errorMessage = json.decode(response.body)['message'] ?? 'Failed to fetch duties';
+//           isLoading = false;
+//         });
 //       }
 //     } catch (e) {
-//       print('Error fetching dashboard data: $e');
+//       setState(() {
+//         errorMessage = 'Error: $e';
+//         isLoading = false;
+//       });
 //     }
 //   }
 
-//   Future<void> _logout() async {
-//     SharedPreferences prefs = await SharedPreferences.getInstance();
-//     await prefs.remove('batchNo');
+//   Widget buildDutyCard(dynamic duty) {
+//     // Color coding status for clarity
+//     Color statusColor;
+//     switch ((duty['status'] ?? '').toLowerCase()) {
+//       case 'active':
+//         statusColor = Colors.green;
+//         break;
+//       case 'pending':
+//         statusColor = Colors.orange;
+//         break;
+//       case 'inactive':
+//       case 'absent':
+//         statusColor = Colors.red;
+//         break;
+//       default:
+//         statusColor = Colors.grey;
+//     }
 
-//     Navigator.pushReplacement(
-//       context,
-//       MaterialPageRoute(builder: (context) => const Login()),
-//     );
-//   }
+//     return InkWell(
+//       borderRadius: BorderRadius.circular(20),
+//       onTap: () {
+//         // You could add navigation or details popup here
+//       },
+//       child: Card(
+//         elevation: 8,
+//         shadowColor: Colors.blueGrey.withOpacity(0.4),
+//         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+//         margin: const EdgeInsets.all(8),
+//         child: Padding(
+//           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+//           child: Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               // Header row with name and badge
+//               Row(
+//                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//                 children: [
+//                   Expanded(
+//                     child: Text(
+//                       duty['name'] ?? 'Unknown',
+//                       style: const TextStyle(
+//                         fontSize: 20,
+//                         fontWeight: FontWeight.w700,
+//                         color: Colors.blueGrey,
+//                       ),
+//                       overflow: TextOverflow.ellipsis,
+//                     ),
+//                   ),
+//                   Container(
+//                     padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
+//                     decoration: BoxDecoration(
+//                       color: statusColor.withOpacity(0.2),
+//                       borderRadius: BorderRadius.circular(12),
+//                     ),
+//                     child: Text(
+//                       duty['status'] ?? 'Unknown',
+//                       style: TextStyle(
+//                         color: statusColor,
+//                         fontWeight: FontWeight.bold,
+//                       ),
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//               const SizedBox(height: 10),
 
-//   void showPMSDialog({
-//     required String title,
-//     required String message,
-//     required IconData icon,
-//     required Color iconColor,
-//   }) {
-//     showDialog(
-//       context: context,
-//       builder: (_) => AlertDialog(
-//         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-//         title: Row(
-//           children: [
-//             Icon(icon, color: iconColor),
-//             const SizedBox(width: 15),
-//             Text(title),
-//           ],
+//               // Badge and Rank info
+//               Row(
+//                 children: [
+//                   const Icon(Icons.badge, size: 18, color: Colors.blueGrey),
+//                   const SizedBox(width: 6),
+//                   Text(
+//                     'Badge: ${duty['badgeNumber'] ?? 'N/A'}',
+//                     style: const TextStyle(fontSize: 14, color: Colors.black87),
+//                   ),
+//                   const SizedBox(width: 20),
+//                   Text(
+//                     'Rank: ${duty['rank'] ?? 'N/A'}',
+//                     style: const TextStyle(fontSize: 14, color: Colors.black87),
+//                   ),
+//                 ],
+//               ),
+//               const SizedBox(height: 16),
+
+//               // Divider
+//               Divider(color: Colors.blueGrey.shade100, thickness: 1),
+//               const SizedBox(height: 12),
+
+//               // Duty details in 2 columns for neatness
+//               Expanded(
+//                 child: GridView(
+//                   physics: const NeverScrollableScrollPhysics(),
+//                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+//                     crossAxisCount: 2,
+//                     mainAxisSpacing: 8,
+//                     crossAxisSpacing: 20,
+//                     childAspectRatio: 4,
+//                   ),
+//                   children: [
+//                     _infoItem(Icons.location_city, 'Police Station', duty['policeStation']),
+//                     _infoItem(Icons.schedule, 'Shift', duty['shift']),
+//                     _infoItem(Icons.place, 'Location', duty['location']),
+//                     _infoItem(Icons.work, 'Duty Type', duty['dutyType']),
+//                     _infoItem(Icons.date_range, 'Duty Date', duty['dutyDate'] != null ? duty['dutyDate'].split('T')[0] : ''),
+//                     _infoItem(Icons.category, 'Category', duty['dutyCategory']),
+//                     _infoItem(Icons.check_circle, 'Total Present', '${duty['totalpresent'] ?? 0}'),
+//                     _infoItem(Icons.cancel, 'Total Absent', '${duty['totalabsent'] ?? 0}'),
+//                   ],
+//                 ),
+//               ),
+//             ],
+//           ),
 //         ),
-//         content: Text(message, style: const TextStyle(fontSize: 16)),
-//         actions: [
-//           TextButton(
-//             onPressed: () => Navigator.pop(context),
-//             child: const Text("Cancel"),
-//           ),
-//           TextButton(
-//             onPressed: () {
-//               Navigator.pop(context);
-//               _logout();
-//             },
-//             child: const Text("OK"),
-//           ),
-//         ],
 //       ),
 //     );
 //   }
 
-//   Widget buildInfoCard(String title, String value) {
-//     return LayoutBuilder(
-//       builder: (context, constraints) {
-//         final bool isSmallWidth = constraints.maxWidth < 150;
-
-//         return AnimatedContainer(
-//           duration: const Duration(milliseconds: 250),
-//           margin: const EdgeInsets.all(6),
-//           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-//           decoration: BoxDecoration(
-//             borderRadius: BorderRadius.circular(16),
-//             gradient: LinearGradient(
-//               colors: [
-//                 Colors.indigo.shade50,
-//                 Colors.indigo.shade100,
+//   Widget _infoItem(IconData icon, String label, String? value) {
+//     return Row(
+//       children: [
+//         Icon(icon, size: 16, color: Colors.blueGrey),
+//         const SizedBox(width: 6),
+//         Flexible(
+//           child: RichText(
+//             text: TextSpan(
+//               text: '$label: ',
+//               style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+//               children: [
+//                 TextSpan(
+//                   text: value ?? 'N/A',
+//                   style: const TextStyle(fontWeight: FontWeight.normal, color: Colors.black54),
+//                 ),
 //               ],
-//               begin: Alignment.topLeft,
-//               end: Alignment.bottomRight,
 //             ),
-//             boxShadow: [
-//               BoxShadow(
-//                 color: Colors.indigo.shade200.withOpacity(0.4),
-//                 offset: const Offset(3, 3),
-//                 blurRadius: 8,
-//                 spreadRadius: 0.8,
-//               ),
-//               BoxShadow(
-//                 color: Colors.white.withOpacity(0.8),
-//                 offset: const Offset(-3, -3),
-//                 blurRadius: 8,
-//                 spreadRadius: 0.8,
-//               ),
-//             ],
 //           ),
-//           child: Column(
-//             crossAxisAlignment: CrossAxisAlignment.start,
-//             mainAxisSize: MainAxisSize.min,
-//             children: [
-//               Text(
-//                 title.toUpperCase(),
-//                 style: TextStyle(
-//                   fontSize: isSmallWidth ? 9 : 11,
-//                   fontWeight: FontWeight.w700,
-//                   letterSpacing: 1.2,
-//                   color: Colors.indigo.shade800,
-//                 ),
-//               ),
-//               const SizedBox(height: 8),
-//               Text(
-//                 value,
-//                 style: TextStyle(
-//                   fontSize: isSmallWidth ? 20 : 28,
-//                   fontWeight: FontWeight.bold,
-//                   color: Colors.indigo.shade900,
-//                   height: 1.1,
-//                 ),
-//               ),
-//             ],
-//           ),
-//         );
-//       },
+//         ),
+//       ],
 //     );
 //   }
 
 //   @override
 //   Widget build(BuildContext context) {
-//     final width = MediaQuery.of(context).size.width;
-//     final horizontalPadding = width * 0.05;
-
-//     // Format coordinates for AppBar display
-//     String coordsDisplay = '';
-//     if (currentLatitude != null && currentLongitude != null) {
-//       coordsDisplay = ' (${currentLatitude!.toStringAsFixed(4)}, ${currentLongitude!.toStringAsFixed(4)})';
+//     final screenWidth = MediaQuery.of(context).size.width;
+//     int crossAxisCount = 1;
+//     if (screenWidth > 1400) {
+//       crossAxisCount = 3;
+//     } else if (screenWidth > 900) {
+//       crossAxisCount = 2;
 //     }
 
 //     return Scaffold(
 //       backgroundColor: Colors.grey.shade100,
 //       appBar: AppBar(
-//         backgroundColor: Colors.white,
-//         elevation: 1,
-//         title: Row(
-//           mainAxisAlignment: MainAxisAlignment.center,
-//           children: [
-//             const Icon(Icons.location_on, color: Colors.redAccent),
-//             const SizedBox(width: 8),
-//             Text(
-//               'Dashboard$coordsDisplay',
-//               style: TextStyle(
-//                 color: Colors.indigo.shade900,
-//                 fontWeight: FontWeight.w900,
-//                 fontSize: 20,
-//                 letterSpacing: 1.4,
-//               ),
-//             ),
-//           ],
-//         ),
+//         title: const Text('My Duties', style: TextStyle(fontWeight: FontWeight.w700)),
 //         centerTitle: true,
-//         iconTheme: IconThemeData(color: Colors.indigo.shade900),
-//         actions: [
-//           IconButton(
-//             icon: const Icon(Icons.refresh),
-//             tooltip: 'Refresh',
-//             onPressed: () async {
-//               if (batchNo.isNotEmpty) {
-//                 await _fetchDashboardData(batchNo);
-//               }
-//               // await _requestLocationPermissionAndFetch(); // Also refresh location on refresh
-//             },
-//           ),
-//           IconButton(
-//             icon: Icon(Icons.logout, color: Colors.red.shade600),
-//             tooltip: 'Logout',
-//             onPressed: () {
-//               showPMSDialog(
-//                 title: "PMS SYSTEM",
-//                 message: "Are you sure you want to logout?",
-//                 icon: Icons.logout,
-//                 iconColor: Colors.red.shade700,
-//               );
-//             },
-//           ),
-//         ],
+//         elevation: 4,
+//         backgroundColor: Colors.blueGrey.shade800,
 //       ),
-//       body: SafeArea(
-//         child: ScrollConfiguration(
-//           behavior: const ScrollBehavior().copyWith(overscroll: true),
-//           child: SingleChildScrollView(
-//             physics: const AlwaysScrollableScrollPhysics(),
-//             padding: EdgeInsets.symmetric(
-//                 horizontal: horizontalPadding, vertical: 20),
-//             child: Column(
-//               children: [
-//                 Align(
-//                   alignment: Alignment.centerLeft,
-//                   child: Text(
-//                     'Welcome to the Dashboard!',
-//                     style: TextStyle(
-//                       fontSize: 26,
-//                       fontWeight: FontWeight.w900,
-//                       letterSpacing: 1.4,
-//                       color: Colors.indigo.shade900,
-//                     ),
-//                   ),
-//                 ),
-//                 const SizedBox(height: 20),
-//                 Wrap(
-//                   spacing: 8,
-//                   runSpacing: 5,
-//                   alignment: WrapAlignment.start,
-//                   children: [
-//                     ...List.generate(
-//                       infoCards.length,
-//                       (index) {
-//                         double cardWidth =
-//                             ((width - horizontalPadding * 2 - 8) / 2)
-//                                 .clamp(140, 180);
-//                         double cardHeight = 150;
-
-//                         return SizedBox(
-//                           width: cardWidth,
-//                           height: cardHeight,
-//                           child: buildInfoCard(infoCards[index]['title']!,
-//                               infoCards[index]['value']!),
-//                         );
-//                       },
-//                     ),
-//                     if (xCoord != null &&
-//                         yCoord != null &&
-//                         locationName != null) ...[
-//                       const SizedBox(height: 0),
-//                       Container(
-//                         width: 350,
-//                         padding: const EdgeInsets.all(16),
-//                         decoration: BoxDecoration(
-//                           color: Colors.indigo.shade50,
-//                           borderRadius: BorderRadius.circular(12),
-//                           boxShadow: [
-//                             BoxShadow(
-//                               color: Colors.indigo.shade100.withOpacity(0.6),
-//                               blurRadius: 6,
-//                               offset: const Offset(2, 2),
-//                             ),
-//                           ],
+//       body: isLoading
+//           ? const Center(child: CircularProgressIndicator())
+//           : errorMessage.isNotEmpty
+//               ? Center(child: Text(errorMessage, style: const TextStyle(fontSize: 16, color: Colors.redAccent)))
+//               : duties.isEmpty
+//                   ? const Center(child: Text('No duties found for this batch.', style: TextStyle(fontSize: 16)))
+//                   : Padding(
+//                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+//                       child: GridView.builder(
+//                         itemCount: duties.length,
+//                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+//                           crossAxisCount: crossAxisCount,
+//                           crossAxisSpacing: 20,
+//                           mainAxisSpacing: 20,
+//                           childAspectRatio: 1.2,
 //                         ),
-//                         child: Column(
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: [
-//                             Text(
-//                               "Active Duty Location",
-//                               style: TextStyle(
-//                                 fontSize: 18,
-//                                 fontWeight: FontWeight.bold,
-//                                 color: Colors.indigo.shade800,
-//                               ),
-//                             ),
-//                             const SizedBox(height: 8),
-//                             Text("Location: $locationName"),
-//                             Text("xCoord: $xCoord"),
-//                             Text("yCoord: $yCoord"),
-//                           ],
-//                         ),
+//                         itemBuilder: (context, index) {
+//                           return buildDutyCard(duties[index]);
+//                         },
 //                       ),
-//                     ],
-//                   ],
-//                 ),
-//               ],
-//             ),
-//           ),
-//         ),
-//       ),
+//                     ),
 //     );
 //   }
 // }

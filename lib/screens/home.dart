@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -21,10 +24,14 @@ class _HomePageState extends State<HomePage> {
   String? xCoord;
   String? yCoord;
   String? locationName;
+  String? checkInTime;
 
   // Current device location (latitude, longitude)
   double? currentLatitude;
   double? currentLongitude;
+  Stream<loc.LocationData>? locationStream;
+  StreamSubscription<loc.LocationData>? locationSubscription;
+  bool isSharingLocation = false;
 
   final loc.Location location = loc.Location();
 
@@ -40,6 +47,82 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadBatchNo();
     _requestLocationPermissionAndFetch();
+  }
+
+  void startSharingLiveLocation() async {
+    if (isSharingLocation) return; // Already sharing, ignore button tap
+
+    // Request permission & service again just to be safe
+    var status = await perm.Permission.location.status;
+    if (!status.isGranted) {
+      status = await perm.Permission.location.request();
+      if (!status.isGranted) {
+        print('Location permission denied');
+        return;
+      }
+    }
+    bool serviceEnabled = await location.serviceEnabled();
+    if (!serviceEnabled) {
+      serviceEnabled = await location.requestService();
+      if (!serviceEnabled) {
+        print('Location service disabled');
+        return;
+      }
+    }
+
+    // Start listening to location changes continuously
+    location.changeSettings(
+        interval: 10000, distanceFilter: 10); // every 10 sec or 10 meters
+    locationStream = location.onLocationChanged;
+
+    locationSubscription =
+        locationStream!.listen((loc.LocationData currentLocation) {
+      currentLatitude = currentLocation.latitude;
+      currentLongitude = currentLocation.longitude;
+
+      print('Live Location update: $currentLatitude, $currentLongitude');
+
+      // Call your API to send the current live location
+      if (currentLatitude != null &&
+          currentLongitude != null &&
+          batchNo.isNotEmpty) {
+        checkIn(currentLatitude!, currentLongitude!, batchNo);
+      }
+
+      setState(() {}); // update UI if needed
+    });
+
+    isSharingLocation = true;
+    print('Started live location sharing');
+  }
+
+  // Example function to call check-in API
+  Future<void> checkIn(
+      double currentLat, double currentLng, String badgeNumber) async {
+    final url = Uri.parse('http://192.168.0.111:5000/api/checkin');
+    final now = DateTime.now().toIso8601String();
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'badgeNumber': batchNo,
+        'currentX': currentLat,
+        'currentY': currentLng,
+        'currentTime': now,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      // Handle success - update UI or show dialog
+      print(
+          'Check-in successful: Present: ${data['totalpresent']}, Absent: ${data['totalabsent']}');
+    } else {
+      final data = jsonDecode(response.body);
+      // Handle error
+      print('Check-in failed: ${data['message']}');
+    }
   }
 
   Future<void> _requestLocationPermissionAndFetch() async {
@@ -295,8 +378,8 @@ class _HomePageState extends State<HomePage> {
           behavior: const ScrollBehavior().copyWith(overscroll: true),
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding:
-                EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 20),
+            padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding, vertical: 20),
             child: Column(
               children: [
                 Align(
@@ -321,18 +404,21 @@ class _HomePageState extends State<HomePage> {
                       infoCards.length,
                       (index) {
                         double cardWidth =
-                            ((width - horizontalPadding * 2 - 8) / 2).clamp(140, 180);
+                            ((width - horizontalPadding * 2 - 8) / 2)
+                                .clamp(140, 180);
                         double cardHeight = 150;
 
                         return SizedBox(
                           width: cardWidth,
                           height: cardHeight,
-                          child: buildInfoCard(
-                              infoCards[index]['title']!, infoCards[index]['value']!),
+                          child: buildInfoCard(infoCards[index]['title']!,
+                              infoCards[index]['value']!),
                         );
                       },
                     ),
-                    if (xCoord != null && yCoord != null && locationName != null) ...[
+                    if (xCoord != null &&
+                        yCoord != null &&
+                        locationName != null) ...[
                       const SizedBox(height: 0),
                       Container(
                         width: 350,
@@ -360,7 +446,7 @@ class _HomePageState extends State<HomePage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Coordinates Data',
+                              'Current Duty',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -392,6 +478,144 @@ class _HomePageState extends State<HomePage> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 20),
+                      Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // Check In Button
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.indigo.shade400,
+                                      Colors.indigo.shade600
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.indigo.shade200
+                                          .withOpacity(0.3),
+                                      offset: const Offset(2, 4),
+                                      blurRadius: 10,
+                                      spreadRadius: 1,
+                                    ),
+                                  ],
+                                ),
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    elevation: 0,
+                                    backgroundColor: Colors.transparent,
+                                    shadowColor: Colors.transparent,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 26, vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                  ),
+                                  onPressed: () async {
+                                    startSharingLiveLocation();
+                                    _handleCheckIn();
+                                    await checkIn(currentLatitude!,
+                                        currentLongitude!, batchNo);
+                                    if (currentLatitude == null ||
+                                        currentLongitude == null) {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text("Location Error"),
+                                          content: const Text(
+                                              "Current location not available."),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(context).pop(),
+                                              child: const Text("OK"),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    if (xCoord == null || yCoord == null) {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text("Data Error"),
+                                          content: const Text(
+                                              "Target coordinates not loaded."),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(context).pop(),
+                                              child: const Text("OK"),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    // Get formatted current time
+                                    String currentTime =
+                                        getFormattedCurrentTime();
+
+                                    // Show the current time in a dialog or you can update a state variable if you want
+                                    // showDialog(
+                                    //   context: context,
+                                    //   builder: (context) => AlertDialog(
+                                    //     title: const Text("Check In Time"),
+                                    //     content:
+                                    //         Text("Checked in at: $currentTime"),
+                                    //     actions: [
+                                    //       TextButton(
+                                    //         onPressed: () =>
+                                    //             Navigator.of(context).pop(),
+                                    //         child: const Text("OK"),
+                                    //       ),
+                                    //     ],
+                                    //   ),
+                                    // );
+                                  },
+                                  icon: const Icon(Icons.login,
+                                      color: Colors.white),
+                                  label: const Text(
+                                    'Share Live Location',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          // Hardcoded check-in and check-out times below buttons
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Last click on $_checkInTime',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ],
                   ],
                 ),
@@ -400,6 +624,69 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
+    );
+  }
+
+  double calculateDistanceInMeters(
+      double lat1, double lon1, double lat2, double lon2) {
+    const double earthRadius = 6371000; // meters
+    double dLat = _degreeToRadian(lat2 - lat1);
+    double dLon = _degreeToRadian(lon2 - lon1);
+
+    double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(_degreeToRadian(lat1)) *
+            cos(_degreeToRadian(lat2)) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
+    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return earthRadius * c;
+  }
+
+  double _degreeToRadian(double degree) {
+    return degree * pi / 180;
+  }
+
+  String getFormattedCurrentTime() {
+    final now = DateTime.now();
+
+    int hour = now.hour;
+    final minute = now.minute;
+
+    final amPm = hour >= 12 ? "PM" : "AM";
+    hour = hour % 12;
+    if (hour == 0) hour = 12;
+
+    final minuteStr = minute.toString().padLeft(2, '0');
+    final hourStr = hour.toString().padLeft(2, '0');
+
+    return "$hourStr:$minuteStr $amPm";
+  }
+
+  String? _checkInTime;
+
+  void _handleCheckIn() {
+    final now = TimeOfDay.now();
+    final formattedTime =
+        '${now.hourOfPeriod.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.period == DayPeriod.am ? 'AM' : 'PM'}';
+
+    setState(() {
+      _checkInTime = formattedTime;
+    });
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Checked In'),
+          content: Text('Check-in time: $_checkInTime'),
+          actions: [
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        );
+      },
     );
   }
 }
