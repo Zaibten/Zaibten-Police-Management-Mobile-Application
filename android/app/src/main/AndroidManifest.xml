@@ -9,7 +9,7 @@
 
 
     <application
-        android:label="Picture AI"
+        android:label="PMS Duty"
         android:name="${applicationName}"
         android:required="false"
         android:icon="@mipmap/ic_launcher">
