@@ -110,7 +110,7 @@ class _DutyPageState extends State<DutyPage> {
   // Example function to call check-in API
   Future<void> checkIn(
       double currentLat, double currentLng, String badgeNumber) async {
-    final url = Uri.parse('https://zaibtenpoliceserver.vercel.app/api/checkin');
+    final url = Uri.parse('http://192.168.0.111:5000/api/checkin');
     final now = DateTime.now().toIso8601String();
 
     final response = await http.post(
@@ -184,7 +184,7 @@ class _DutyPageState extends State<DutyPage> {
   Future<void> _fetchDashboardData(String batchNo) async {
     try {
       final response = await http
-          .get(Uri.parse('https://zaibtenpoliceserver.vercel.app/api/dashboard/$batchNo'));
+          .get(Uri.parse('http://192.168.0.111:5000/api/dashboard/$batchNo'));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -265,7 +265,7 @@ class _DutyPageState extends State<DutyPage> {
         return;
       }
 
-      final url = Uri.parse('https://zaibtenpoliceserver.vercel.app/api/myduties/$batchNo');
+      final url = Uri.parse('http://192.168.0.111:5000/api/myduties/$batchNo');
       final response = await http.get(url);
 
       if (response.statusCode == 200) {

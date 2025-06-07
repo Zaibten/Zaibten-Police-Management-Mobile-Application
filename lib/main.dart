@@ -5,6 +5,7 @@ import 'screens/global.dart';
 import 'screens/home.dart';
 import 'screens/login.dart';
 import 'screens/profile.dart';
+import 'splash.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,8 +34,8 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      // home: HomePage(),
-      home: isLoggedIn ? HomePage() : const Login(),
+      home: SplashScreen(),
+      // home: isLoggedIn ? HomePage() : const Login(),
     );
   }
 }

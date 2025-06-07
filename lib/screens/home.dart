@@ -100,66 +100,81 @@ class _HomePageState extends State<HomePage> {
     print('Started live location sharing');
   }
 
-  void showErrorDialog(BuildContext context, String message) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Error'),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('OK'),
-            ),
-          ],
-        );
-      },
+  // void showErrorDialog(BuildContext context, String message) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) {
+  //       return AlertDialog(
+  //         title: Text('Error'),
+  //         content: Text(message),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () => Navigator.of(context).pop(),
+  //             child: Text('OK'),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
+
+Future<void> checkIn(double currentLat, double currentLng, String badgeNumber) async {
+  final url = Uri.parse('http://192.168.0.111:5000/api/checkin');
+  final now = DateTime.now().toIso8601String();
+
+  final response = await http.post(
+    url,
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'badgeNumber': badgeNumber,
+      'currentX': currentLat,
+      'currentY': currentLng,
+      'currentTime': now,
+    }),
+  );
+
+if (response.statusCode == 200) {
+  final data = jsonDecode(response.body);
+
+  if (data['success'] == true) {
+    // User is in range - show SnackBar instead of modal
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Location fetched at $_checkInTime'),
+        backgroundColor: const Color.fromARGB(255, 103, 156, 226),
+        duration: Duration(seconds: 3),
+      ),
     );
+  } else {
+    // User outside range - show error modal
+    showErrorDialog(context, data['message'] ?? 'You are outside the duty range!');
   }
+}
+ else {
+  final data = jsonDecode(response.body);
+  showErrorDialog(context, data['message'] ?? 'Unknown error occurred');
+}
 
-  Future<void> checkIn(
-      double currentLat, double currentLng, String badgeNumber) async {
-    final url = Uri.parse('https://zaibtenpoliceserver.vercel.app/api/checkin');
-    final now = DateTime.now().toIso8601String();
+}
 
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'badgeNumber': badgeNumber,
-        'currentX': currentLat,
-        'currentY': currentLng,
-        'currentTime': now,
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Checked In'),
-            content: Text('Check-in time: $_checkInTime'),
-            actions: [
-              TextButton(
-                child: const Text('OK'),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          );
-        },
+// You need to have this helper function somewhere in your Flutter app:
+void showErrorDialog(BuildContext context, String message) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            child: const Text('OK'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
       );
-      print(
-          'Check-in successful: Present: ${data['totalpresent']}, Absent: ${data['totalabsent']}');
-      // You can also show a success message modal here if you want
-    } else {
-      final data = jsonDecode(response.body);
-      // Show error message in modal dialog
-      showErrorDialog(context, data['message'] ?? 'Unknown error');
-    }
-  }
+    },
+  );
+}
 
   Future<void> _requestLocationPermissionAndFetch() async {
     // Check permission using permission_handler package
@@ -209,7 +224,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _fetchDashboardData(String batchNo) async {
     try {
       final response = await http
-          .get(Uri.parse('https://zaibtenpoliceserver.vercel.app/api/dashboard/$batchNo'));
+          .get(Uri.parse('http://192.168.0.111:5000/api/dashboard/$batchNo'));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

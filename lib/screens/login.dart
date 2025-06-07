@@ -271,20 +271,13 @@ class _LoginState extends State<Login> {
                                               enteredBatchNo.isEmpty) {
                                             return; // Cancelled or empty input
                                           }
-
-                                          // Save batchNo locally
-                                          SharedPreferences prefs =
-                                              await SharedPreferences
-                                                  .getInstance();
-                                          await prefs.setString(
-                                              'batchNo', enteredBatchNo);
-
+                                          
                                           // Send request to backend and get result
                                           String messageToShow = '';
                                           try {
                                             final response = await http.post(
                                               Uri.parse(
-                                                  "https://zaibtenpoliceserver.vercel.app/send-simple-email"),
+                                                  "http://192.168.0.111:5000/send-simple-email"),
                                               headers: {
                                                 'Content-Type':
                                                     'application/json'
@@ -425,7 +418,7 @@ class _LoginState extends State<Login> {
 
       try {
         final response = await http.post(
-          Uri.parse("https://zaibtenpoliceserver.vercel.app/moblogin"),
+          Uri.parse("http://192.168.0.111:5000/moblogin"),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'batchNo': batchNo, 'password': password}),
         );

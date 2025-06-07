@@ -74,7 +74,7 @@
 //     String messageToShow = '';
 //     try {
 //       final response = await http.post(
-//         Uri.parse("https://zaibtenpoliceserver.vercel.app/send-simple-email"),
+//         Uri.parse("http://192.168.0.111:5000/send-simple-email"),
 //         headers: {'Content-Type': 'application/json'},
 //         body: jsonEncode({'batchNo': enteredBatchNo}),
 //       );
