@@ -277,7 +277,7 @@ class _LoginState extends State<Login> {
                                           try {
                                             final response = await http.post(
                                               Uri.parse(
-                                                  "http://192.168.0.111:5000/send-simple-email"),
+                                                  "https://zaibtenpoliceserver.vercel.app/send-simple-email"),
                                               headers: {
                                                 'Content-Type':
                                                     'application/json'
@@ -418,7 +418,7 @@ class _LoginState extends State<Login> {
 
       try {
         final response = await http.post(
-          Uri.parse("http://192.168.0.111:5000/moblogin"),
+          Uri.parse("https://zaibtenpoliceserver.vercel.app/moblogin"),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'batchNo': batchNo, 'password': password}),
         );

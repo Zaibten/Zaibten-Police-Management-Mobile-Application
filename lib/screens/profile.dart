@@ -54,7 +54,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> fetchConstableData(String batchNo) async {
-    final url = Uri.parse('http://192.168.0.111:5000/api/constables/$batchNo');
+    final url = Uri.parse('https://zaibtenpoliceserver.vercel.app/api/constables/$batchNo');
     // Replace https://yourserver.com with your real backend URL
 
     try {
