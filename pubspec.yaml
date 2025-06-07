@@ -17,7 +17,6 @@ dependencies:
   provider: ^6.1.1
   shared_preferences: ^2.2.2
   google_fonts: ^4.0.3
-  google_nav_bar: ^5.0.6
   badges: ^3.1.2
   animated_splash_screen:
   carousel_slider: ^4.1.1
@@ -30,6 +29,7 @@ dependencies:
   video_player: ^2.7.0
   location: ^7.0.0
   connectivity_plus: ^4.0.0
+  google_nav_bar: ^5.0.7
 
 dependency_overrides:
   geolocator_android: 4.6.1

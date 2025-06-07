@@ -4,6 +4,7 @@ import 'screens/duty.dart';
 import 'screens/global.dart';
 import 'screens/home.dart';
 import 'screens/login.dart';
+import 'screens/profile.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,8 +33,8 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: DutyPage(),
-      // home: isLoggedIn ? HomePage() : const Login(),
+      // home: HomePage(),
+      home: isLoggedIn ? HomePage() : const Login(),
     );
   }
 }

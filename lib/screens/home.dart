@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -10,7 +11,9 @@ import 'package:http/http.dart' as http;
 import 'package:location/location.dart' as loc;
 import 'package:permission_handler/permission_handler.dart' as perm;
 
+import 'duty.dart';
 import 'login.dart';
+import 'profile.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -25,6 +28,7 @@ class _HomePageState extends State<HomePage> {
   String? yCoord;
   String? locationName;
   String? checkInTime;
+  int _selectedIndex = 0;
 
   // Current device location (latitude, longitude)
   double? currentLatitude;
@@ -96,17 +100,34 @@ class _HomePageState extends State<HomePage> {
     print('Started live location sharing');
   }
 
-  // Example function to call check-in API
+  void showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Error'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> checkIn(
       double currentLat, double currentLng, String badgeNumber) async {
-    final url = Uri.parse('http://192.168.0.111:5000/api/checkin');
+    final url = Uri.parse('https://zaibtenpoliceserver.vercel.app/api/checkin');
     final now = DateTime.now().toIso8601String();
 
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'badgeNumber': batchNo,
+        'badgeNumber': badgeNumber,
         'currentX': currentLat,
         'currentY': currentLng,
         'currentTime': now,
@@ -115,13 +136,28 @@ class _HomePageState extends State<HomePage> {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      // Handle success - update UI or show dialog
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Checked In'),
+            content: Text('Check-in time: $_checkInTime'),
+            actions: [
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          );
+        },
+      );
       print(
           'Check-in successful: Present: ${data['totalpresent']}, Absent: ${data['totalabsent']}');
+      // You can also show a success message modal here if you want
     } else {
       final data = jsonDecode(response.body);
-      // Handle error
-      print('Check-in failed: ${data['message']}');
+      // Show error message in modal dialog
+      showErrorDialog(context, data['message'] ?? 'Unknown error');
     }
   }
 
@@ -173,7 +209,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _fetchDashboardData(String batchNo) async {
     try {
       final response = await http
-          .get(Uri.parse('http://192.168.0.111:5000/api/dashboard/$batchNo'));
+          .get(Uri.parse('https://zaibtenpoliceserver.vercel.app/api/dashboard/$batchNo'));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -344,13 +380,13 @@ class _HomePageState extends State<HomePage> {
             },
           ),
           IconButton(
-            icon: Icon(Icons.logout, color: Colors.red.shade600),
+            icon: Icon(Icons.logout_sharp, color: Colors.red.shade600),
             tooltip: 'Logout',
             onPressed: () {
               showPMSDialog(
                 title: "PMS SYSTEM",
                 message: "Are you sure you want to logout?",
-                icon: Icons.logout,
+                icon: Icons.logout_sharp,
                 iconColor: Colors.red.shade700,
               );
             },
@@ -623,6 +659,90 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ),
+
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: GNav(
+            gap: 10,
+            activeColor: Colors.white,
+            color: Colors.grey[700],
+            iconSize: 26,
+            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 14),
+            duration: const Duration(milliseconds: 500),
+            tabBackgroundColor: const Color.fromARGB(255, 94, 131, 233),
+            curve: Curves.easeOutExpo,
+            tabs: [
+              GButton(
+                icon: Icons.home,
+                text: 'Home',
+                iconSize: 28,
+                textStyle: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+              GButton(
+                icon: Icons.workspace_premium,
+                text: 'Duties',
+                iconSize: 28,
+                textStyle: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+              GButton(
+                icon: Icons.person, // changed Icons.profile to Icons.person (valid icon)
+                text: 'Profile',
+                iconSize: 28,
+                textStyle: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+            selectedIndex: _selectedIndex,
+           onTabChange: (index) {
+  setState(() {
+    _selectedIndex = index;
+  });
+if (index == 0) { // Duties tab index
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => HomePage()),
+    );
+  }
+  if (index == 1) { // Duties tab index
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => DutyPage()),
+    );
+  }
+    if (index == 2) { // Duties tab index
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ProfilePage()),
+    );
+  }
+},
+
+          ),
+        ),
       ),
     );
   }
@@ -673,20 +793,20 @@ class _HomePageState extends State<HomePage> {
       _checkInTime = formattedTime;
     });
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Checked In'),
-          content: Text('Check-in time: $_checkInTime'),
-          actions: [
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
-        );
-      },
-    );
+    // showDialog(
+    //   context: context,
+    //   builder: (BuildContext context) {
+    //     return AlertDialog(
+    //       title: const Text('Checked In'),
+    //       content: Text('Check-in time: $_checkInTime'),
+    //       actions: [
+    //         TextButton(
+    //           child: const Text('OK'),
+    //           onPressed: () => Navigator.of(context).pop(),
+    //         ),
+    //       ],
+    //     );
+    //   },
+    // );
   }
 }
